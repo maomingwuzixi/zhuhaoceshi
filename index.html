@@ -239,12 +239,32 @@
         <div id="itemsList" class="items-list"></div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        let items = JSON.parse(localStorage.getItem('countdownItems') || '[]');
+        const supabaseUrl = 'https://ieyhuuqsrtxroaoqmwsy.supabase.co';
+        const supabaseKey = 'sb_publishable__pqlEoFnotbdhdqG-DCVYw_4hziD_Hx';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        let items = [];
         let updateInterval;
 
-        function saveItems() {
-            localStorage.setItem('countdownItems', JSON.stringify(items));
+        async function loadItems() {
+            const { data, error } = await supabase
+                .from('items')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('加载失败:', error);
+                return;
+            }
+            
+            items = data || [];
+            renderItems();
+        }
+
+        async function saveItems() {
+            // 不再需要此函数，因为每个操作直接同步到 Supabase
         }
 
         function formatTimeLeft(timeLeft) {
@@ -273,9 +293,19 @@
             return 'normal';
         }
 
-        function deleteItem(id) {
+        async function deleteItem(id) {
+            const { error } = await supabase
+                .from('items')
+                .delete()
+                .eq('id', id);
+            
+            if (error) {
+                console.error('删除失败:', error);
+                alert('删除失败，请重试');
+                return;
+            }
+            
             items = items.filter(item => item.id !== id);
-            saveItems();
             renderItems();
         }
 
@@ -294,7 +324,7 @@
             }
 
             itemsList.innerHTML = items.map(item => {
-                const status = getStatus(item.expireTime);
+                const status = getStatus(item.expire_time);
                 const statusText = status === 'expired' ? '已过期' : status === 'warning' ? '即将过期' : '正常';
                 
                 return `
@@ -309,7 +339,7 @@
                             计算中...
                         </div>
                         <div class="item-info">
-                            到期时间: ${new Date(item.expireTime).toLocaleString('zh-CN')}
+                            到期时间: ${new Date(item.expire_time).toLocaleString('zh-CN')}
                         </div>
                     </div>
                 `;
@@ -323,7 +353,7 @@
                 const element = document.getElementById(`countdown-${item.id}`);
                 if (!element) return;
 
-                const timeLeft = item.expireTime - now;
+                const timeLeft = item.expire_time - now;
                 
                 if (timeLeft <= 0) {
                     element.textContent = '已过期';
@@ -335,7 +365,7 @@
             });
         }
 
-        document.getElementById('addForm').addEventListener('submit', function(e) {
+        document.getElementById('addForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const name = document.getElementById('itemName').value.trim();
@@ -357,18 +387,28 @@
             const newItem = {
                 id: Date.now(),
                 name: name,
-                expireTime: expireTime,
-                createdAt: new Date().getTime()
+                expire_time: expireTime,
+                created_at: new Date().getTime()
             };
 
-            items.push(newItem);
-            saveItems();
+            const { error } = await supabase
+                .from('items')
+                .insert([newItem]);
+            
+            if (error) {
+                console.error('添加失败:', error);
+                alert('添加失败，请重试');
+                return;
+            }
+
+            items.unshift(newItem);
             renderItems();
 
             this.reset();
         });
 
-        function init() {
+        async function init() {
+            await loadItems();
             renderItems();
             updateCountdowns();
             updateInterval = setInterval(updateCountdowns, 1000);
