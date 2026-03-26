@@ -243,13 +243,13 @@
     <script>
         const supabaseUrl = 'https://ieyhuuqsrtxroaoqmwsy.supabase.co';
         const supabaseKey = 'sb_publishable__pqlEoFnotbdhdqG-DCVYw_4hziD_Hx';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         let items = [];
         let updateInterval;
 
         async function loadItems() {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('items')
                 .select('*')
                 .order('created_at', { ascending: false });
@@ -294,7 +294,7 @@
         }
 
         async function deleteItem(id) {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('items')
                 .delete()
                 .eq('id', id);
@@ -391,7 +391,7 @@
                 created_at: new Date().getTime()
             };
 
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('items')
                 .insert([newItem]);
             
