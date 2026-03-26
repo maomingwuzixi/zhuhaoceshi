@@ -1,2 +1,380 @@
-hallo
-测试站点
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物品倒计时应用</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .add-form {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+        }
+
+        .add-form h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .items-list {
+            display: grid;
+            gap: 20px;
+        }
+
+        .item-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .item-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .item-card.expired {
+            border-left: 5px solid #ff6b6b;
+        }
+
+        .item-card.warning {
+            border-left: 5px solid #feca57;
+        }
+
+        .item-card.normal {
+            border-left: 5px solid #1dd1a1;
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .item-name {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 14px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-delete {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #ee5a5a;
+        }
+
+        .countdown-display {
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .item-info {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.8;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .expired .countdown-display {
+            color: #ff6b6b;
+            animation: pulse 1s infinite;
+        }
+
+        .warning .countdown-display {
+            color: #feca57;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .countdown-display {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⏰ 物品倒计时</h1>
+
+        <div class="add-form">
+            <h2>添加新物品</h2>
+            <form id="addForm">
+                <div class="form-group">
+                    <label for="itemName">物品名称</label>
+                    <input type="text" id="itemName" placeholder="例如：牛奶、优惠券、会员资格" required>
+                </div>
+                <div class="form-group">
+                    <label for="expireDate">到期日期</label>
+                    <input type="datetime-local" id="expireDate" required>
+                </div>
+                <button type="submit" class="btn">添加物品</button>
+            </form>
+        </div>
+
+        <div id="itemsList" class="items-list"></div>
+    </div>
+
+    <script>
+        let items = JSON.parse(localStorage.getItem('countdownItems') || '[]');
+        let updateInterval;
+
+        function saveItems() {
+            localStorage.setItem('countdownItems', JSON.stringify(items));
+        }
+
+        function formatTimeLeft(timeLeft) {
+            const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+            if (days > 0) {
+                return `${days}天 ${hours}小时 ${minutes}分 ${seconds}秒`;
+            } else if (hours > 0) {
+                return `${hours}小时 ${minutes}分 ${seconds}秒`;
+            } else if (minutes > 0) {
+                return `${minutes}分 ${seconds}秒`;
+            } else {
+                return `${seconds}秒`;
+            }
+        }
+
+        function getStatus(expireTime) {
+            const now = new Date().getTime();
+            const timeLeft = expireTime - now;
+
+            if (timeLeft <= 0) return 'expired';
+            if (timeLeft <= 24 * 60 * 60 * 1000) return 'warning';
+            return 'normal';
+        }
+
+        function deleteItem(id) {
+            items = items.filter(item => item.id !== id);
+            saveItems();
+            renderItems();
+        }
+
+        function renderItems() {
+            const itemsList = document.getElementById('itemsList');
+            
+            if (items.length === 0) {
+                itemsList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📦</div>
+                        <p>还没有添加任何物品</p>
+                        <p>在上方添加第一个物品开始使用吧！</p>
+                    </div>
+                `;
+                return;
+            }
+
+            itemsList.innerHTML = items.map(item => {
+                const status = getStatus(item.expireTime);
+                const statusText = status === 'expired' ? '已过期' : status === 'warning' ? '即将过期' : '正常';
+                
+                return `
+                    <div class="item-card ${status}" data-id="${item.id}">
+                        <div class="item-header">
+                            <div class="item-name">${item.name}</div>
+                            <div class="item-actions">
+                                <button class="btn-small btn-delete" onclick="deleteItem(${item.id})">删除</button>
+                            </div>
+                        </div>
+                        <div class="countdown-display" id="countdown-${item.id}">
+                            计算中...
+                        </div>
+                        <div class="item-info">
+                            到期时间: ${new Date(item.expireTime).toLocaleString('zh-CN')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateCountdowns() {
+            const now = new Date().getTime();
+            
+            items.forEach(item => {
+                const element = document.getElementById(`countdown-${item.id}`);
+                if (!element) return;
+
+                const timeLeft = item.expireTime - now;
+                
+                if (timeLeft <= 0) {
+                    element.textContent = '已过期';
+                    document.querySelector(`[data-id="${item.id}"]`).classList.remove('normal', 'warning');
+                    document.querySelector(`[data-id="${item.id}"]`).classList.add('expired');
+                } else {
+                    element.textContent = formatTimeLeft(timeLeft);
+                }
+            });
+        }
+
+        document.getElementById('addForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('itemName').value.trim();
+            const expireDate = document.getElementById('expireDate').value;
+            
+            if (!name || !expireDate) return;
+
+            const expireTime = new Date(expireDate).getTime();
+            if (isNaN(expireTime)) {
+                alert('请输入有效的日期时间');
+                return;
+            }
+
+            if (expireTime <= new Date().getTime()) {
+                alert('到期时间必须晚于当前时间');
+                return;
+            }
+
+            const newItem = {
+                id: Date.now(),
+                name: name,
+                expireTime: expireTime,
+                createdAt: new Date().getTime()
+            };
+
+            items.push(newItem);
+            saveItems();
+            renderItems();
+
+            this.reset();
+        });
+
+        function init() {
+            renderItems();
+            updateCountdowns();
+            updateInterval = setInterval(updateCountdowns, 1000);
+        }
+
+        init();
+    </script>
+</body>
+</html>
